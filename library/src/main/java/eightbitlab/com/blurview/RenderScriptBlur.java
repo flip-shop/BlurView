@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.os.Build;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
+import android.renderscript.RSInvalidStateException;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicBlur;
 
@@ -25,9 +26,12 @@ import androidx.annotation.RequiresApi;
 @Deprecated
 public class RenderScriptBlur implements BlurAlgorithm {
     private final Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
-    private final RenderScript renderScript;
+    private RenderScript renderScript;
     private final ScriptIntrinsicBlur blurScript;
     private Allocation outAllocation;
+    // context to recreate RenderScript when glide will destroy every single instance
+    // using RenderScript.releaseAllContexts(); function
+    private Context context;
 
     private int lastBitmapWidth = -1;
     private int lastBitmapHeight = -1;
@@ -54,7 +58,13 @@ public class RenderScriptBlur implements BlurAlgorithm {
     @Override
     public Bitmap blur(@NonNull Bitmap bitmap, float blurRadius) {
         //Allocation will use the same backing array of pixels as bitmap if created with USAGE_SHARED flag
-        Allocation inAllocation = Allocation.createFromBitmap(renderScript, bitmap);
+        Allocation inAllocation;
+        try {
+            inAllocation = Allocation.createFromBitmap(renderScript, bitmap);
+        } catch (RSInvalidStateException exception) {
+            renderScript = RenderScript.create(context);
+            inAllocation = Allocation.createFromBitmap(renderScript, bitmap);
+        }
 
         if (!canReuseAllocation(bitmap)) {
             if (outAllocation != null) {
@@ -79,6 +89,7 @@ public class RenderScriptBlur implements BlurAlgorithm {
     public final void destroy() {
         blurScript.destroy();
         renderScript.destroy();
+        context = null;
         if (outAllocation != null) {
             outAllocation.destroy();
         }
