@@ -31,7 +31,7 @@ public class RenderScriptBlur implements BlurAlgorithm {
     private Allocation outAllocation;
     // context to recreate RenderScript when glide will destroy every single instance
     // using RenderScript.releaseAllContexts(); function
-    private Context context;
+    private Context mContext;
 
     private int lastBitmapWidth = -1;
     private int lastBitmapHeight = -1;
@@ -41,6 +41,7 @@ public class RenderScriptBlur implements BlurAlgorithm {
      */
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     public RenderScriptBlur(@NonNull Context context) {
+        mContext = context;
         renderScript = RenderScript.create(context);
         blurScript = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript));
     }
@@ -62,7 +63,7 @@ public class RenderScriptBlur implements BlurAlgorithm {
         try {
             inAllocation = Allocation.createFromBitmap(renderScript, bitmap);
         } catch (RSInvalidStateException exception) {
-            renderScript = RenderScript.create(context);
+            renderScript = RenderScript.create(mContext);
             inAllocation = Allocation.createFromBitmap(renderScript, bitmap);
         }
 
@@ -89,7 +90,7 @@ public class RenderScriptBlur implements BlurAlgorithm {
     public final void destroy() {
         blurScript.destroy();
         renderScript.destroy();
-        context = null;
+        mContext = null;
         if (outAllocation != null) {
             outAllocation.destroy();
         }
